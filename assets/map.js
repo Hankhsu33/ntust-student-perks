@@ -1,6 +1,56 @@
-(()=>{let map,layer,markers=new Map(),visible=[],lastIds='',baseLayer,tileFailures=0;const el=()=>document.querySelector('#store-map');
-function init(){if(map)return true;if(!window.L){document.querySelector('#map-status').textContent='地圖套件未載入，仍可使用商店清單。';return false;}map=L.map(el(),{scrollWheelZoom:false}).setView([25.0148,121.534],16);baseLayer=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',maxZoom:19});baseLayer.on('loading',()=>{tileFailures=0;});baseLayer.on('tileerror',()=>{tileFailures++;document.querySelector('#map-status').textContent='底圖載入失敗。請使用上方 Google Maps 入口；清單仍可查詢。';});baseLayer.on('load',()=>{if(!tileFailures)document.querySelector('#map-status').textContent=markers.size+' 個地址定位'+(visible.length-markers.size?'，'+(visible.length-markers.size)+' 家位置待確認':'')+'；店面入口待確認';});baseLayer.addTo(map);if(window.ResizeObserver)new ResizeObserver(()=>map.invalidateSize()).observe(el());layer=L.layerGroup().addTo(map);document.querySelector('#fit-map').addEventListener('click',fit);return true;}
+(()=>{
+let map,layer,userLayer,baseLayer,tileFailures=0,markers=new Map(),visible=[],lastIds='',firstFit=false;
+const $=s=>document.querySelector(s);
+function status(selector,message=''){const node=$(selector);if(node){node.textContent=message;node.hidden=!message;}}
+function showMap(){ $('.explore-layout').dataset.view='map';document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view==='map')));map.invalidateSize(); }
+function init(){
+ if(map)return true;
+ if(!window.L){status('#map-status','地圖套件未載入，仍可使用商店清單。');return false;}
+ map=L.map($('#store-map'),{scrollWheelZoom:false}).setView([25.0148,121.534],16);
+ baseLayer=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',maxZoom:19});
+ baseLayer.on('loading',()=>{tileFailures=0;});
+ baseLayer.on('tileerror',()=>{tileFailures++;status('#map-status','底圖載入失敗。請使用上方 Google Maps 入口；清單仍可查詢。');});
+ baseLayer.on('load',()=>{if(!tileFailures)status('#map-status');});
+ baseLayer.addTo(map);
+ if(window.ResizeObserver)new ResizeObserver(()=>map.invalidateSize()).observe($('#store-map'));
+ layer=L.layerGroup().addTo(map);userLayer=L.layerGroup().addTo(map);
+ $('#fit-map').addEventListener('click',fit);$('#locate-me').addEventListener('click',locateMe);
+ return true;
+}
 function fit(){const points=visible.filter(s=>Number.isFinite(s.lat)&&Number.isFinite(s.lng)).map(s=>[s.lat,s.lng]);if(points.length)map.fitBounds(points,{padding:[45,45],maxZoom:16});}
-function highlight(id){const store=visible.find(s=>s.id===id);const google=document.querySelector('#google-map-link');if(store&&google){google.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(store.name+' '+store.address);google.textContent='在 Google Maps 查看'+store.name;} document.querySelectorAll('.directory-row').forEach(row=>row.classList.toggle('selected',row.id==='store-'+id));const row=document.getElementById('store-'+id);row?.scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
-window.PerksMap={update(rows){visible=rows;if(!init())return;layer.clearLayers();markers.clear();for(const s of rows){if(!Number.isFinite(s.lat)||!Number.isFinite(s.lng))continue;const marker=L.marker([s.lat,s.lng],{icon:L.divIcon({className:'perk-pin',html:`<span><b>${s.index+1}</b></span>`,iconSize:[34,38],iconAnchor:[17,38]}),title:s.name,keyboard:true});const popup=document.createElement('div');const title=document.createElement('strong');title.textContent=s.name;const offer=document.createElement('p');offer.textContent=s.offer;const note=document.createElement('small');note.textContent='地址定位，期限及資格待確認';const button=document.createElement('button');button.textContent='查看優惠 ↗';button.addEventListener('click',()=>document.querySelector(`[data-store="${s.index}"]`)?.click());popup.append(title,offer,note,document.createElement('br'),button);marker.bindPopup(popup).on('click',()=>highlight(s.id)).addTo(layer);markers.set(s.id,marker);}document.querySelector('#map-status').textContent=`${markers.size} 個地址定位${rows.length-markers.size?'，'+(rows.length-markers.size)+' 家位置待確認':''}`;const ids=rows.map(s=>s.id).join(',');if(lastIds&&ids!==lastIds&&markers.size)fit();lastIds=ids;if(!window.__mapFirstFit&&markers.size){window.__mapFirstFit=true;const near=rows.filter(s=>s.lat>25&&Number.isFinite(s.lng));if(near.length)map.fitBounds(near.map(s=>[s.lat,s.lng]),{padding:[50,50],maxZoom:16});else fit();}},select(id){const m=markers.get(id);if(!m)return;document.querySelector('.explore-layout').dataset.view='map';document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view==='map')));map.invalidateSize();map.setView(m.getLatLng(),17,{animate:!matchMedia('(prefers-reduced-motion: reduce)').matches});m.openPopup();highlight(id);},resize(){requestAnimationFrame(()=>map?.invalidateSize());}};
+function locateMe(){
+ if(!navigator.geolocation){status('#location-status','此瀏覽器不支援定位。');return;}
+ if(window.isSecureContext===false){status('#location-status','請在 HTTPS 正式網站使用定位。');return;}
+ const button=$('#locate-me');button.disabled=true;button.setAttribute('aria-busy','true');status('#location-status','正在取得你的位置…');
+ const finish=()=>{button.disabled=false;button.removeAttribute('aria-busy');};
+ try{navigator.geolocation.getCurrentPosition(position=>{
+  finish();const {latitude,longitude,accuracy}=position.coords;
+  if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||Math.abs(latitude)>90||Math.abs(longitude)>180){status('#location-status','無法取得有效位置，請稍後重試。');return;}
+  const point=[latitude,longitude];userLayer.clearLayers();
+  if(Number.isFinite(accuracy)&&accuracy>0)L.circle(point,{radius:accuracy,className:'user-location-accuracy',weight:1,fillOpacity:.12,interactive:false}).addTo(userLayer);
+  L.marker(point,{title:'你的位置',zIndexOffset:1000,icon:L.divIcon({className:'user-location-pin',html:'<span aria-hidden="true"></span>',iconSize:[24,24],iconAnchor:[12,12]})}).bindTooltip('你的位置').addTo(userLayer);
+  showMap();map.setView(point,accuracy>2000?13:16,{animate:!matchMedia('(prefers-reduced-motion: reduce)').matches});
+  button.textContent='更新我的位置';status('#location-status','已顯示你的位置'+(Number.isFinite(accuracy)&&accuracy>0?'，定位精度約 '+Math.round(accuracy)+' 公尺':'')+'。');
+ },error=>{finish();status('#location-status',error.code===1?'定位未獲允許，請在瀏覽器的網站權限中開啟定位。':error.code===3?'定位逾時，請稍後再試。':'目前無法取得位置，請確認裝置定位已開啟。');},{enableHighAccuracy:true,timeout:12000,maximumAge:60000});}
+ catch{finish();status('#location-status','定位無法啟動，請檢查瀏覽器的網站權限。');}
+}
+function highlight(id){
+ const store=visible.find(s=>s.id===id),google=$('#google-map-link');
+ if(store&&google){google.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(store.name+' '+store.address);google.textContent='在 Google Maps 查看'+store.name;}
+ document.querySelectorAll('.directory-row').forEach(row=>row.classList.toggle('selected',row.id==='store-'+id));
+ document.getElementById('store-'+id)?.scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+}
+window.PerksMap={update(rows){
+ visible=rows;if(!init())return;layer.clearLayers();markers.clear();
+ for(const s of rows){
+  if(!Number.isFinite(s.lat)||!Number.isFinite(s.lng))continue;
+  const marker=L.marker([s.lat,s.lng],{icon:L.divIcon({className:'perk-pin',html:`<span><b>${s.index+1}</b></span>`,iconSize:[34,38],iconAnchor:[17,38]}),title:s.name,keyboard:true});
+  const popup=document.createElement('div'),title=document.createElement('strong'),offer=document.createElement('p'),button=document.createElement('button');
+  title.textContent=s.name;offer.textContent=s.offer;button.textContent='查看優惠 ↗';
+  button.addEventListener('click',()=>document.querySelector(`[data-store="${s.index}"]`)?.click());
+  popup.append(title,offer,button);marker.bindPopup(popup).on('click',()=>highlight(s.id)).addTo(layer);markers.set(s.id,marker);
+ }
+ const ids=rows.map(s=>s.id).join(',');if(lastIds&&ids!==lastIds&&markers.size)fit();lastIds=ids;
+ if(!firstFit&&markers.size){firstFit=true;fit();}
+},select(id){const m=markers.get(id);if(!m)return;showMap();map.setView(m.getLatLng(),17,{animate:!matchMedia('(prefers-reduced-motion: reduce)').matches});m.openPopup();highlight(id);},resize(){requestAnimationFrame(()=>map?.invalidateSize());}};
 })();
