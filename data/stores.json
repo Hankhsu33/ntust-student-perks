@@ -117,14 +117,19 @@
     "eligibility": "待確認",
     "startDate": "",
     "endDate": "",
-    "updatedAt": "2026-11-14",
+    "updatedAt": "2026-11-15",
     "hours": "",
     "closedDays": "",
     "schedule": null,
     "closures": [],
     "image": "",
     "imageAlt": "店家實拍待提供",
-    "gallery": []
+    "gallery": [],
+    "lat": 25.0138892,
+    "lng": 121.5337626,
+    "locationSource": "https://maps.app.goo.gl/6B9rYj4n1iSY1NCw6",
+    "locationMatch": "敘方Xufang台北公館店",
+    "locationAccuracy": "使用者提供的 Google Maps 店家地點"
   },
   {
     "id": "sheet-oo-38",
