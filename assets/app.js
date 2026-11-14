@@ -1,0 +1,52 @@
+const config = window.PERKS_CONFIG || {};
+let stores = [];
+const $ = s=>document.querySelector(s);
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function safeUrl(value){try{if(!value)return '';const u=new URL(value,location.href);return ['https:','http:'].includes(u.protocol)?u.href:'';}catch{return '';}}
+function isOpen(store,now=new Date()){
+ const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(now).map(p=>[p.type,p.value]));
+ const day=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(parts.weekday),minutes=+parts.hour*60 + +parts.minute;
+ const closed=String(store.closedDays||'').split(',').filter(Boolean).map(Number);
+ return String(store.hours||'').split(';').some(range=>{const match=range.trim().match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/);if(!match)return false;const [,h,m,hh,mm]=match.map(Number);if(h>23||hh>23||m>59||mm>59)return false;const start=h*60+m,end=hh*60+mm;if(end>start)return !closed.includes(day)&&minutes>=start&&minutes<end;if(end<start)return (minutes>=start&&!closed.includes(day))||(minutes<end&&!closed.includes((day+6)%7));return false;});
+}
+let category='全部';
+function renderCategories(){const categories=['全部',...new Set(stores.map(s=>s.category))];$('#categories').innerHTML=categories.map(c=>`<button type="button" aria-pressed="${c===category}" data-category="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('');}
+function render(){const query=$('#search').value.trim().toLowerCase();const filtered=stores.map((s,i)=>({...s,index:i})).filter(s=>extraMatch(s)&&(category==='全部'||s.category===category)&&(!$('#open-only').checked||isOpen(s))&&[s.name,s.category,s.area,s.description,s.offer,s.district].join(' ').toLowerCase().includes(query));
+ $('#result-count').textContent=filtered.length+' 家店，'+filtered.filter(s=>Number.isFinite(s.lat)&&Number.isFinite(s.lng)).length+' 個地圖位置';
+ $('#empty').hidden=filtered.length>0;$('#cards').innerHTML=filtered.map(s=>`<article class="card directory-row ${s.image?'has-photo':'no-photo'}" id="store-${s.id}"><div class="row-image">${s.image?`<img src="${escapeHtml(safeUrl(s.image))}" alt="${escapeHtml(s.imageAlt||s.name)}" loading="lazy">`:`<span class="list-index" aria-label="地圖編號 ${s.index+1}">${String(s.index+1).padStart(2,'0')}</span>`}${s.image?`<span class="row-number">${s.index+1}</span>`:''}</div><div class="row-copy"><p class="row-kicker">${escapeHtml(s.category)} <span>／ ${escapeHtml(s.area)}</span></p><h3><button data-locate="${s.id}">${escapeHtml(s.name)}</button></h3><p class="row-offer">${escapeHtml(s.offer)}</p><p class="row-status">${escapeHtml(s.contractStatus||'合作狀態待確認')}，${s.startDate&&s.endDate?escapeHtml(s.startDate+' 至 '+s.endDate):'期限待確認'}</p><div class="row-actions"><button data-store="${s.index}" aria-haspopup="dialog">優惠與限制</button><button data-locate="${s.id}">${Number.isFinite(s.lat)?'在地圖查看':'位置待確認'}</button></div></div><button class="save-icon" data-save="${s.id}" aria-label="${saved.has(s.id)?'取消收藏':'收藏'}${escapeHtml(s.name)}" aria-pressed="${saved.has(s.id)}">${saved.has(s.id)?'♥':'♡'}</button></article>`).join('');window.PerksMap?.update(filtered);
+}
+function openStore(index){const s=stores[index];if(!s)return;$('#detail-content').innerHTML=`${s.image?`<img class="detail-image" src="${escapeHtml(safeUrl(s.image))}" alt="${escapeHtml(s.imageAlt||s.name)}">`:''}<div class="detail-body"><h2 id="detail-title">${escapeHtml(s.name)}</h2><p>${escapeHtml(s.description)}</p><p class="offer">${escapeHtml(s.offer)}</p><p>${escapeHtml(s.contractStatus||'')}，期限及資格待確認</p><dl><dt>營業時間</dt><dd>${escapeHtml((s.hours||'待確認').replaceAll(';',' / '))}（臺灣時間）</dd><dt>固定休息</dt><dd>${String(s.closedDays||'').split(',').filter(Boolean).map(d=>'週'+['日','一','二','三','四','五','六'][Number(d)]).join('、')||'待確認'}</dd><dt>使用規則</dt><dd>${escapeHtml(s.rules)}</dd><dt>地址</dt><dd>${escapeHtml(s.address)}</dd></dl>${config.tsLogoUrl?`<img class="ts-logo" src="${escapeHtml(safeUrl(config.tsLogoUrl))}" alt="TS 特約商店識別">`:''}${s.address?`<a class="button" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.address)}">Google Maps 導航 ↗</a>`:`<p>地址待確認，暫不提供導航。</p>`}</div>`;$('#detail').showModal();track('store_view',{store_id:s.id});track('perk_view',{store_id:s.id});}
+$('#search-form').addEventListener('submit',e=>{e.preventDefault();render();});$('#search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{render();track('store_search',{result_count:$('#cards').children.length});},200);});$('#open-only').addEventListener('change',render);$('#categories').addEventListener('click',e=>{const b=e.target.closest('[data-category]');if(b){category=b.dataset.category;track('category_filter',{category});renderCategories();render();}});$('#cards').addEventListener('click',e=>{const b=e.target.closest('[data-store]');if(b)openStore(Number(b.dataset.store));});$('#close-detail').addEventListener('click',()=>$('#detail').close());
+
+if(config.studentUnionLogoUrl){const logo=document.createElement('img');logo.src=safeUrl(config.studentUnionLogoUrl);logo.alt='臺科大學生會';logo.className='union-logo';$('header .brand').replaceChildren(logo);}
+
+let searchTimer;let saved=new Set();try{saved=new Set(JSON.parse(localStorage.getItem('perks-saved')||'[]'));}catch{}
+function today(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
+function validPerk(s){return s.status==='active'&&s.startDate&&s.endDate&&s.startDate<=today()&&s.endDate>=today();}
+function extraMatch(s){return (!$('#area').value||s.area===$('#area').value)&&(!$('#eligibility').value||s.eligibility===$('#eligibility').value)&&(!$('#valid-only').checked||validPerk(s))&&(!$('#saved-only').checked||saved.has(s.id));}
+const legacyOpen=isOpen;
+isOpen=function(s,now=new Date()){
+ const fmt=d=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei'}).format(d);
+ const date=fmt(now),previous=fmt(new Date(+now-86400000));
+ if((s.closures||[]).includes(date))return false;
+ if(!s.schedule)return s.hours?legacyOpen(s,now):false;
+ const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(now).map(p=>[p.type,p.value]));
+ const day=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(parts.weekday),min=+parts.hour*60 + +parts.minute;
+ const ranges=day=>String(s.schedule[day]||'').split(';').map(r=>r.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/)).filter(Boolean).map(m=>[+m[1]*60 + +m[2],+m[3]*60 + +m[4]]);
+ return ranges(day).some(([a,b])=>a<b?min>=a&&min<b:min>=a&&a>b)||(!(s.closures||[]).includes(previous)&&ranges((day+6)%7).some(([a,b])=>a>b&&min<b));
+};
+function businessLabel(s){if(!s.hours&&!s.schedule)return '營業時間待確認';return isOpen(s)?'● 營業中':'○ 休息中';}
+function track(name,params={}){if(window.gtag)window.gtag('event',name,params);}
+function startAnalytics(){if(!/^G-[A-Z0-9]+$/.test(config.ga4Id||'')||window.gtag)return;window.dataLayer=window.dataLayer||[];window.gtag=function(){window.dataLayer.push(arguments)};window.gtag('js',new Date());window.gtag('config',config.ga4Id,{send_page_view:false});const script=document.createElement('script');script.src='https://www.googletagmanager.com/gtag/js?id='+config.ga4Id;script.async=true;document.head.append(script);}
+try{if(localStorage.getItem('perks-consent')==='yes')startAnalytics();else if(!localStorage.getItem('perks-consent')&&config.ga4Id)$('#consent').hidden=false;}catch{}
+document.addEventListener('click',e=>{const consent=e.target.closest('[data-consent]');if(consent){try{localStorage.setItem('perks-consent',consent.dataset.consent)}catch{}$('#consent').hidden=true;if(consent.dataset.consent==='yes')startAnalytics();}const save=e.target.closest('[data-save]');if(save){saved.has(save.dataset.save)?saved.delete(save.dataset.save):saved.add(save.dataset.save);try{localStorage.setItem('perks-saved',JSON.stringify([...saved]))}catch{}render();}if(e.target.closest('a[href*="google.com/maps"]'))track('maps_click');if(e.target.closest('a[href*="rules"]'))track('rules_view');});
+for(const id of ['area','eligibility','valid-only','saved-only'])$('#'+id).addEventListener('change',render);
+$('#favorites-link').addEventListener('click',()=>{$('#saved-only').checked=true;render();});
+$('#reset-filters').addEventListener('click',()=>{$('#search').value='';$('#area').value='';$('#eligibility').value='';for(const id of ['valid-only','saved-only','open-only'])$('#'+id).checked=false;category='全部';renderCategories();render();});
+function collections(){const areas=[...new Set(stores.map(s=>s.area))];$('#area').innerHTML='<option value="">全部地區</option>'+areas.map(a=>`<option>${escapeHtml(a)}</option>`).join('');}
+$('#area-shortcut').addEventListener('click',()=>{document.querySelector('.advanced').open=true;$('#area').focus();});
+document.addEventListener('error',e=>{if(e.target.tagName==='IMG'){e.target.removeAttribute('src');e.target.alt='店家圖片待提供';e.target.classList.add('image-missing');}},true);
+async function loadData(){try{stores=window.PERKS_DATA||await (await fetch('data/stores.json')).json();collections();renderCategories();render();}catch{$('#cards').textContent='資料載入失敗，請重新整理或稍後再試。';}}loadData();setInterval(render,60000);
+
+document.addEventListener('click',e=>{const b=e.target.closest('[data-locate]');if(b){const selected=stores.find(s=>s.id===b.dataset.locate);if(selected){if(!Number.isFinite(selected.lat)){openStore(stores.indexOf(selected));return;}window.PerksMap?.select(selected.id);}}const view=e.target.closest('[data-view]');if(view){document.querySelector('.explore-layout').dataset.view=view.dataset.view;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b===view)));window.PerksMap?.resize();}});
+

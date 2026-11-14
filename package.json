@@ -1,0 +1,10 @@
+{
+  "name": "ntust-student-perks",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.cjs",
+    "sync": "node scripts/sync.cjs",
+    "check": "node --check assets/app.js && node --check scripts/build.cjs && node --check scripts/sync.cjs && node --check assets/map.js",
+    "start": "node scripts/serve.cjs"
+  }
+}
