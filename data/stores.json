@@ -97,7 +97,12 @@
     "imageAlt": "店家實拍待提供",
     "gallery": [],
     "sourceSheet": "OO",
-    "offerSource": "OO 優惠內容"
+    "offerSource": "OO 優惠內容",
+    "lat": 25.013970902662,
+    "lng": 121.533302330195,
+    "locationSource": "ArcGIS address geocoding",
+    "locationMatch": "台北市中正區水源里汀州路三段104巷9號, 10091",
+    "locationAccuracy": "地址定位，店面入口待確認"
   },
   {
     "id": "sheet-oo-31",
@@ -197,7 +202,12 @@
     "gallery": [],
     "offerType": "店家優惠",
     "sourceSheet": "OO",
-    "offerSource": "OO 優惠內容"
+    "offerSource": "OO 優惠內容",
+    "lat": 24.982567012768,
+    "lng": 121.50777298096,
+    "locationSource": "ArcGIS address geocoding",
+    "locationMatch": "新北市中和區華新街146號, 235058",
+    "locationAccuracy": "地址定位，店面入口待確認"
   },
   {
     "id": "sheet-oo-57",
@@ -460,6 +470,11 @@
     "closures": [],
     "image": "",
     "imageAlt": "店家實拍待提供",
-    "gallery": []
+    "gallery": [],
+    "lat": 25.027114606941,
+    "lng": 121.510496177483,
+    "locationSource": "ArcGIS address geocoding",
+    "locationMatch": "台北市中正區永昌里汀州路一段250號, 10073",
+    "locationAccuracy": "地址定位，店面入口待確認"
   }
 ]

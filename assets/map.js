@@ -41,7 +41,7 @@ function highlight(id){
  document.getElementById('store-'+id)?.scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
 }
 window.PerksMap={update(rows){
- visible=rows;if(!init())return;layer.clearLayers();markers.clear();
+ visible=rows;const missing=rows.filter(s=>!Number.isFinite(s.lat)||!Number.isFinite(s.lng));status('#map-coverage',missing.length?`地圖顯示 ${rows.length-missing.length} / ${rows.length} 家；${missing.map(s=>s.name).join('、')}位置待確認，仍可查看店家詳情。`:`地圖顯示全部 ${rows.length} 家店家。`);if(!init())return;layer.clearLayers();markers.clear();
  for(const s of rows){
   if(!Number.isFinite(s.lat)||!Number.isFinite(s.lng))continue;
   const marker=L.marker([s.lat,s.lng],{icon:L.divIcon({className:'perk-pin',html:`<span><b>${s.index+1}</b></span>`,iconSize:[34,38],iconAnchor:[17,38]}),title:s.name,keyboard:true});
