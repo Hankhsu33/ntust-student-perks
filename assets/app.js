@@ -43,10 +43,14 @@ document.addEventListener('click',e=>{const consent=e.target.closest('[data-cons
 for(const id of ['area','eligibility','valid-only','saved-only'])$('#'+id).addEventListener('change',render);
 $('#favorites-link').addEventListener('click',()=>{$('#saved-only').checked=true;render();});
 $('#reset-filters').addEventListener('click',()=>{$('#search').value='';$('#area').value='';$('#eligibility').value='';for(const id of ['valid-only','saved-only','open-only'])$('#'+id).checked=false;category='全部';renderCategories();render();});
-function collections(){const areas=[...new Set(stores.map(s=>s.area))];$('#area').innerHTML='<option value="">全部地區</option>'+areas.map(a=>`<option>${escapeHtml(a)}</option>`).join('');}
+function collections(){const picker=$('#map-store-select');picker.replaceChildren(new Option('選擇店家，查看地點',''),...stores.map((s,i)=>new Option(String(i+1).padStart(2,'0')+' '+s.name,s.id)));const areas=[...new Set(stores.map(s=>s.area))];$('#area').innerHTML='<option value="">全部地區</option>'+areas.map(a=>`<option>${escapeHtml(a)}</option>`).join('');}
 $('#area-shortcut').addEventListener('click',()=>{document.querySelector('.advanced').open=true;$('#area').focus();});
 document.addEventListener('error',e=>{if(e.target.tagName==='IMG'){e.target.removeAttribute('src');e.target.alt='店家圖片待提供';e.target.classList.add('image-missing');}},true);
 async function loadData(){try{stores=window.PERKS_DATA||await (await fetch('data/stores.json')).json();collections();renderCategories();render();}catch{$('#cards').textContent='資料載入失敗，請重新整理或稍後再試。';}}loadData();setInterval(render,60000);
 
 document.addEventListener('click',e=>{const b=e.target.closest('[data-locate]');if(b){const selected=stores.find(s=>s.id===b.dataset.locate);if(selected){if(!Number.isFinite(selected.lat)){openStore(stores.indexOf(selected));return;}window.PerksMap?.select(selected.id);}}const view=e.target.closest('[data-view]');if(view){document.querySelector('.explore-layout').dataset.view=view.dataset.view;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b===view)));window.PerksMap?.resize();}});
 
+
+function focusMapStore(id){const s=stores.find(s=>s.id===id);if(!s)return;if(!window.PerksMap?.select(id)){document.querySelector('#reset-filters').click();if(!window.PerksMap?.select(id))openStore(stores.indexOf(s));}}
+$('#map-store-select').addEventListener('change',e=>{if(e.target.value)focusMapStore(e.target.value);});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-event-store]');if(b){focusMapStore(b.dataset.eventStore);$('#stores').scrollIntoView({block:'start'});}});
