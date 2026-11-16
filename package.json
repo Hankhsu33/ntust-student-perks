@@ -1,5 +1,5 @@
 {
-  "name": "ntust-student-perks",
+  "name": "ntustsa.partnerstore",
   "private": true,
   "scripts": {
     "build": "node scripts/build.cjs",

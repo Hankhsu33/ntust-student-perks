@@ -1,4 +1,4 @@
-# NTUST Student Perks
+# ntustsa.partnerstore
 
 臺科學生的優惠店家清單與互動地圖。
 
@@ -21,7 +21,7 @@ npm start
 ## 發布
 
 推送 main 後，GitHub Actions 建置 dist 並發布 GitHub Pages。
-公開網址：https://hankhsu33.github.io/ntust-student-perks/
+公開網址：https://hankhsu33.github.io/ntustsa.partnerstore/
 GitHub Variables 的 SITE_URL 設為以上網址（不含最後斜線）。
 
 目前採用本地公開 JSON 快照。店家合作期限、適用資格、圖片及部分地址仍待確認，詳情依頁面說明。
