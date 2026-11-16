@@ -36,7 +36,7 @@ function locateMe(){
 }
 function highlight(id){
  const store=visible.find(s=>s.id===id),google=$('#google-map-link');
- if(store&&google){google.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(store.name+' '+store.address);google.textContent='在 Google Maps 查看'+store.name;}
+ if(store&&google){google.href=store.googleMapsUrl||'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(store.name+' '+store.address);google.textContent='在 Google Maps 查看'+store.name;}
  document.querySelectorAll('.directory-row').forEach(row=>row.classList.toggle('selected',row.id==='store-'+id));
  document.getElementById('store-'+id)?.scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
 }
