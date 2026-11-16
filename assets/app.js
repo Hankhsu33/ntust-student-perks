@@ -22,8 +22,8 @@ if(config.studentUnionLogoUrl){const logo=document.createElement('img');logo.src
 
 let searchTimer;let saved=new Set();try{saved=new Set(JSON.parse(localStorage.getItem('perks-saved')||'[]'));}catch{}
 function today(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
-function validPerk(s){return s.status==='active'&&s.startDate&&s.endDate&&s.startDate<=today()&&s.endDate>=today();}
-function extraMatch(s){return (!$('#area').value||s.area===$('#area').value)&&(!$('#eligibility').value||s.eligibility===$('#eligibility').value)&&(!$('#valid-only').checked||validPerk(s))&&(!$('#saved-only').checked||saved.has(s.id));}
+
+function extraMatch(s){return (!$('#area').value||s.area===$('#area').value)&&(!$('#eligibility').value||s.eligibility===$('#eligibility').value)&&(!$('#saved-only').checked||saved.has(s.id));}
 const legacyOpen=isOpen;
 isOpen=function(s,now=new Date()){
  const fmt=d=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei'}).format(d);
@@ -40,9 +40,9 @@ function track(name,params={}){if(window.gtag)window.gtag('event',name,params);}
 function startAnalytics(){if(!/^G-[A-Z0-9]+$/.test(config.ga4Id||'')||window.gtag)return;window.dataLayer=window.dataLayer||[];window.gtag=function(){window.dataLayer.push(arguments)};window.gtag('js',new Date());window.gtag('config',config.ga4Id,{send_page_view:false});const script=document.createElement('script');script.src='https://www.googletagmanager.com/gtag/js?id='+config.ga4Id;script.async=true;document.head.append(script);}
 try{if(localStorage.getItem('perks-consent')==='yes')startAnalytics();else if(!localStorage.getItem('perks-consent')&&config.ga4Id)$('#consent').hidden=false;}catch{}
 document.addEventListener('click',e=>{const consent=e.target.closest('[data-consent]');if(consent){try{localStorage.setItem('perks-consent',consent.dataset.consent)}catch{}$('#consent').hidden=true;if(consent.dataset.consent==='yes')startAnalytics();}const save=e.target.closest('[data-save]');if(save){saved.has(save.dataset.save)?saved.delete(save.dataset.save):saved.add(save.dataset.save);try{localStorage.setItem('perks-saved',JSON.stringify([...saved]))}catch{}render();}if(e.target.closest('a[href*="google.com/maps"]'))track('maps_click');if(e.target.closest('a[href*="rules"]'))track('rules_view');});
-for(const id of ['area','eligibility','valid-only','saved-only'])$('#'+id).addEventListener('change',render);
+for(const id of ['area','eligibility','saved-only'])$('#'+id).addEventListener('change',render);
 $('#favorites-link').addEventListener('click',()=>{$('#saved-only').checked=true;render();});
-$('#reset-filters').addEventListener('click',()=>{$('#search').value='';$('#area').value='';$('#eligibility').value='';for(const id of ['valid-only','saved-only','open-only'])$('#'+id).checked=false;category='全部';renderCategories();render();});
+$('#reset-filters').addEventListener('click',()=>{$('#search').value='';$('#area').value='';$('#eligibility').value='';for(const id of ['saved-only','open-only'])$('#'+id).checked=false;category='全部';renderCategories();render();});
 function collections(){const picker=$('#map-store-select');picker.replaceChildren(new Option('選擇店家，查看地點',''),...stores.map((s,i)=>new Option(String(i+1).padStart(2,'0')+' '+s.name,s.id)));const areas=[...new Set(stores.map(s=>s.area))];$('#area').innerHTML='<option value="">全部地區</option>'+areas.map(a=>`<option>${escapeHtml(a)}</option>`).join('');}
 $('#area-shortcut').addEventListener('click',()=>{document.querySelector('.advanced').open=true;$('#area').focus();});
 document.addEventListener('error',e=>{if(e.target.tagName==='IMG'){e.target.removeAttribute('src');e.target.alt='店家圖片待提供';e.target.classList.add('image-missing');}},true);
