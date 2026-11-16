@@ -278,7 +278,7 @@
     "startDate": "",
     "endDate": "",
     "updatedAt": "2026-11-16",
-    "hours": "",
+    "hours": "11:00-21:00",
     "closedDays": "",
     "schedule": null,
     "closures": [],
@@ -301,7 +301,9 @@
     "googleVerifiedAt": "2026-11-16",
     "district": "中和區",
     "phoneSource": "未提供",
-    "hoursDisplay": "Google Maps 未提供營業時間"
+    "hoursDisplay": "11:00–21:00",
+    "hoursSource": "使用者提供",
+    "hoursUpdatedAt": "2026-11-16"
   },
   {
     "id": "sheet-oo-57",
